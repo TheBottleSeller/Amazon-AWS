@@ -40,18 +40,18 @@ public class HorizontalScaler {
 		System.out.println("Setting up properties and clients");
 		properties = new Properties();
 		properties.load(HorizontalScaler.class.getResourceAsStream("/AwsCredentials.properties"));
-		
+
 		bawsc = new BasicAWSCredentials(properties.getProperty("accessKey"), properties.getProperty("secretKey"));
-		
+
 		//Launch an EC2 and AmazonCloud Client
 		ec2 = new AmazonEC2Client(bawsc);
 		cw = new AmazonCloudWatchClient(bawsc);
 		autoscaler = new AmazonAutoScalingClient(bawsc);
 		elb = new AmazonElasticLoadBalancingClient(bawsc);
-		//createHorizontalScaler();	
-		deleteAutoScalingGroup("nbatliva-horizontalscaler2");
+		//createHorizontalScaler();
+		deleteAutoScalingGroup("username-horizontalscaler2");
 	}
-	
+
 	public static void deleteAutoScalingGroup(String name) {
 		UpdateAutoScalingGroupRequest ureq = new UpdateAutoScalingGroupRequest();
 		ureq.withAutoScalingGroupName(name);
@@ -61,7 +61,7 @@ public class HorizontalScaler {
 		req.withAutoScalingGroupName(name);
 		autoscaler.deleteAutoScalingGroup(req);
 	}
-	
+
 	public static void createHorizontalScaler() {
 		System.out.println("Creating elastic load balancer");
 		CreateLoadBalancerRequest createreq = new CreateLoadBalancerRequest();
@@ -84,11 +84,11 @@ public class HorizontalScaler {
 		StringBuilder userData = new StringBuilder();
 		userData.append("#!/bin/bash");
 		userData.append("");
-		
+
 		System.out.println("Creating launch configuration");
 		CreateLaunchConfigurationRequest launchrequest = new CreateLaunchConfigurationRequest();
 		launchrequest
-			.withLaunchConfigurationName("nbatliva-horizontalscaler-launch2")
+			.withLaunchConfigurationName("username-horizontalscaler-launch2")
 			.withImageId("ami-fab52b93")
 			.withInstanceType("m1.small")
 			.withSecurityGroups("default")
@@ -104,16 +104,16 @@ public class HorizontalScaler {
 				return;
 			}
 		}
-		
+
 		// Create Auto Scaling Group
 		System.out.println("Creating auto scaling group");
 		CreateAutoScalingGroupRequest groupreq = new CreateAutoScalingGroupRequest();
 		groupreq
-			.withAutoScalingGroupName("nbatliva-horizontalscaler2")
+			.withAutoScalingGroupName("username-horizontalscaler2")
 			.withMinSize(1)
 			.withMaxSize(4)
 			.withDesiredCapacity(1)
-			.withLaunchConfigurationName("nbatliva-horizontalscaler-launch2")
+			.withLaunchConfigurationName("username-horizontalscaler-launch2")
 			.withAvailabilityZones("us-east-1c")
 			.withLoadBalancerNames("horizontalscaler2");
 		try {
@@ -125,13 +125,13 @@ public class HorizontalScaler {
 				return;
 			}
 		}
-		
+
 		System.out.println("Creating scale out policy");
 		PutScalingPolicyRequest policyrequest = new PutScalingPolicyRequest();
 		policyrequest.setPolicyName("ScaleOut");
 		policyrequest.setScalingAdjustment(1);
 		policyrequest.setAdjustmentType("ChangeInCapacity");
-		policyrequest.setAutoScalingGroupName("nbatliva-horizontalscaler2");
+		policyrequest.setAutoScalingGroupName("username-horizontalscaler2");
 		PutScalingPolicyResult policyresult = autoscaler.putScalingPolicy(policyrequest);
 		String ARN = policyresult.getPolicyARN();
 		PutMetricAlarmRequest alarmRequest = new PutMetricAlarmRequest();
@@ -145,13 +145,13 @@ public class HorizontalScaler {
 		alarmRequest.setComparisonOperator("GreaterThanThreshold");
 		alarmRequest.setEvaluationPeriods(1);
 		cw.putMetricAlarm(alarmRequest);
-		
+
 		System.out.println("Creating alarm for scale in policy");
 		policyrequest = new PutScalingPolicyRequest();
 		policyrequest.setPolicyName("ScaleIn");
 		policyrequest.setScalingAdjustment(-1);
 		policyrequest.setAdjustmentType("ChangeInCapacity");
-		policyrequest.setAutoScalingGroupName("nbatliva-horizontalscaler2");
+		policyrequest.setAutoScalingGroupName("username-horizontalscaler2");
 		policyresult = autoscaler.putScalingPolicy(policyrequest);
 		ARN = policyresult.getPolicyARN();
 		alarmRequest = new PutMetricAlarmRequest();
@@ -165,10 +165,10 @@ public class HorizontalScaler {
 		alarmRequest.setComparisonOperator("LessThanThreshold");
 		alarmRequest.setEvaluationPeriods(1);
 		cw.putMetricAlarm(alarmRequest);
-		
+
 		// set up email notification
 		PutNotificationConfigurationRequest emailRequest = new PutNotificationConfigurationRequest();
-		emailRequest.setAutoScalingGroupName("nbatliva-horizontalscaler2");
+		emailRequest.setAutoScalingGroupName("username-horizontalscaler2");
 		emailRequest.setTopicARN("arn:aws:sns:us-east-1:556704617897:Project2");
 		String[] types = new String[2];
 		types[0] = "autoscaling:EC2_INSTANCE_LAUNCH";
